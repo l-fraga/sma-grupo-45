@@ -38,19 +38,31 @@ def uniform(min_val, max_val):
 config_rede = {
     # Define os parâmetros estruturais de cada fila
     "filas": {
-        "F1": {"servidores": 2, "capacidade": 3, "atend_min": 3.0, "atend_max": 4.0},
-        "F2": {"servidores": 1, "capacidade": 5, "atend_min": 2.0, "atend_max": 3.0}
+        "q1": {"servidores": 1, "capacidade": 1, "atend_min": 1.0, "atend_max": 2.0},
+        "q2": {"servidores": 2, "capacidade": 5, "atend_min": 4.0, "atend_max": 6.0},
+        "q3": {"servidores": 2, "capacidade": 10, "atend_min": 5.0, "atend_max": 15.0}
     },
     
     # Define quais filas recebem clientes de "fora" do sistema
     "chegadas_externas": {
-        "F1": {"cheg_min": 1.0, "cheg_max": 4.0, "primeira_chegada": 1.5}
+        "q1": {"cheg_min": 2.0, "cheg_max": 4.0, "primeira_chegada": 2.0}
     },
     
     # Define para onde o cliente vai após o atendimento (Matriz de Probabilidades)
     "roteamento": {
-        "F1": [{"destino": "F2", "prob": 1.0}],  # 100% vai para a Fila 2
-        "F2": [{"destino": "OUT", "prob": 1.0}]  # 100% sai do sistema
+        "q1": [
+            {"destino": "q2", "prob": 0.8},
+            {"destino": "q3", "prob": 0.2}
+        ],
+        "q2": [
+            {"destino": "q1", "prob": 0.3},
+            {"destino": "q2", "prob": 0.5},
+            {"destino": "OUT", "prob": 0.2}
+        ],
+        "q3": [
+            {"destino": "q3", "prob": 0.7},
+            {"destino": "OUT", "prob": 0.3}
+        ]
     }
 }
 
@@ -151,30 +163,30 @@ def simular_rede(config):
 # =====================================================================
 def imprimir_resultados(t_global, tempos, perdas, config):
     for fid, cfg in config["filas"].items():
-        print("*" * 54)
-        print(f"Queue:    {fid} (G/G/{cfg['servidores']}/{cfg['capacidade']})")
+        print("\n------------- Queue Information ---------------")
+        print(f"Queue: (G/G/{cfg['servidores']}/{cfg['capacidade']})")
         
         # Verifica se a fila recebe chegadas externas para imprimir
         if fid in config["chegadas_externas"]:
             ch = config["chegadas_externas"][fid]
-            print(f"Arrival: {ch['cheg_min']:.1f} ... {ch['cheg_max']:.1f}")
+            print(f"Arrivals between: {ch['cheg_min']:.1f} ... {ch['cheg_max']:.1f}")
         else:
-            print("Arrival: Routed from network")
+            print("Arrivals between: Routed from network")
             
-        print(f"Service: {cfg['atend_min']:.1f} ... {cfg['atend_max']:.1f}")
-        print("*" * 54)
-        print("  State           Time        Probability")
+        print(f"Service between: {cfg['atend_min']:.1f} ... {cfg['atend_max']:.1f}")
+        print("-------------- Time Distribution ---------------")
         
         for i, t in enumerate(tempos[fid]):
             p = (t / t_global * 100) if t_global > 0 else 0
-            print(f"{i:>7}     {t:10.4f}         {p:>5.2f}%")
-            
-        print(f"\nNumber of losses: {perdas[fid]}\n")
+            print(f"{i}: {t:.2f} ({p:.2f}%)")
 
-    print("*" * 54)
-    print(f"Global Time: {t_global:.4f}")
-    print(f"Randoms used: {_MAX_RND}")
-    print("*" * 54)
+        print("------------- Lost Clients --------------")
+        print(f"Lost Clients: {perdas[fid]}")
+        print("-------- Simulation Time ----------")
+        print(f"Total Time: {t_global:.2f}")
+        print("=================================================================")
+
+    print("Total Simulation Time: {:.2f}".format(t_global))
 
 # =====================================================================
 # MAIN
