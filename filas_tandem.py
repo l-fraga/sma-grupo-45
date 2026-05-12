@@ -38,30 +38,28 @@ def uniform(min_val, max_val):
 config_rede = {
     # Define os parâmetros estruturais de cada fila
     "filas": {
-        "q1": {"servidores": 1, "capacidade": 1, "atend_min": 1.0, "atend_max": 2.0},
-        "q2": {"servidores": 2, "capacidade": 5, "atend_min": 4.0, "atend_max": 6.0},
-        "q3": {"servidores": 2, "capacidade": 10, "atend_min": 5.0, "atend_max": 15.0}
+        "q1": {"servidores": 1, "capacidade": 15, "atend_min": 2.0, "atend_max": 5.0}, #triagem
+        "q2": {"servidores": 2, "capacidade": 10, "atend_min": 4.0, "atend_max": 10.0}, #consultas
+        "q3": {"servidores": 2, "capacidade": 10, "atend_min": 8.0, "atend_max": 15.0} #exames
     },
     
     # Define quais filas recebem clientes de "fora" do sistema
     "chegadas_externas": {
-        "q1": {"cheg_min": 2.0, "cheg_max": 4.0, "primeira_chegada": 2.0}
+        "q1": {"cheg_min": 1.0, "cheg_max": 4.0, "primeira_chegada": 2.0}
     },
     
     # Define para onde o cliente vai após o atendimento (Matriz de Probabilidades)
     "roteamento": {
         "q1": [
-            {"destino": "q2", "prob": 0.8},
-            {"destino": "q3", "prob": 0.2}
+            {"destino": "q2", "prob": 0.7},
+            {"destino": "q3", "prob": 0.3}
         ],
         "q2": [
-            {"destino": "q1", "prob": 0.3},
-            {"destino": "q2", "prob": 0.5},
-            {"destino": "OUT", "prob": 0.2}
+            {"destino": "q3", "prob": 0.4},
+            {"destino": "OUT", "prob": 0.6}
         ],
         "q3": [
-            {"destino": "q3", "prob": 0.7},
-            {"destino": "OUT", "prob": 0.3}
+            {"destino": "q2", "prob": 1.0}
         ]
     }
 }
