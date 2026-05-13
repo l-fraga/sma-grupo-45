@@ -40,7 +40,7 @@ config_rede = {
     "filas": {
         "q1": {"servidores": 1, "capacidade": 15, "atend_min": 2.0, "atend_max": 5.0}, #triagem
         "q2": {"servidores": 2, "capacidade": 10, "atend_min": 4.0, "atend_max": 10.0}, #consultas
-        "q3": {"servidores": 2, "capacidade": 10, "atend_min": 8.0, "atend_max": 15.0} #exames
+        "q3": {"servidores": 1, "capacidade": 5, "atend_min": 8.0, "atend_max": 15.0} #exames
     },
     
     # Define quais filas recebem clientes de "fora" do sistema
@@ -82,6 +82,7 @@ def simular_rede(config):
     estado = {fid: 0 for fid in filas_cfg}
     perdas = {fid: 0 for fid in filas_cfg}
     tempos = {fid: [0.0] * (filas_cfg[fid]["capacidade"] + 1) for fid in filas_cfg}
+    saidas = {fid: 0 for fid in filas_cfg}
     
     heap = []
     t_atual = 0.0
@@ -128,6 +129,8 @@ def simular_rede(config):
                     perdas[fid] += 1
                     
             elif tipo == SAIDA:
+                saidas[fid] += 1
+
                 # Libera o cliente da fila atual
                 estado[fid] -= 1
                 if estado[fid] >= filas_cfg[fid]["servidores"]:
@@ -153,13 +156,45 @@ def simular_rede(config):
     except StopSimulation:
         pass # Simulação encerra limpa no limite de números aleatórios
         
-    return t_atual, tempos, perdas
+    return t_atual, tempos, perdas, saidas
+
+
+def calcular_indices_desempenho(t_global, tempos, saidas, config):
+    indices = {}
+
+    for fid, cfg in config["filas"].items():
+        populacao = 0.0
+        ocupacao_servidores = 0.0
+
+        for n_clientes, tempo_no_estado in enumerate(tempos[fid]):
+            populacao += n_clientes * tempo_no_estado
+            ocupacao_servidores += min(n_clientes, cfg["servidores"]) * tempo_no_estado
+
+        populacao = populacao / t_global if t_global > 0 else 0.0
+        vazao = saidas[fid] / t_global if t_global > 0 else 0.0
+        utilizacao = (
+            ocupacao_servidores / (cfg["servidores"] * t_global)
+            if t_global > 0 and cfg["servidores"] > 0
+            else 0.0
+        )
+        tempo_resposta = populacao / vazao if vazao > 0 else 0.0
+
+        indices[fid] = {
+            "populacao": populacao,
+            "vazao": vazao,
+            "utilizacao": utilizacao,
+            "tempo_resposta": tempo_resposta,
+        }
+
+    return indices
 
 
 # =====================================================================
 # 4. IMPRESSÃO DE RESULTADOS
 # =====================================================================
-def imprimir_resultados(t_global, tempos, perdas, config):
+def imprimir_resultados(t_global, tempos, perdas, saidas, config):
+    indices = calcular_indices_desempenho(t_global, tempos, saidas, config)
+
     for fid, cfg in config["filas"].items():
         print("\n------------- Queue Information ---------------")
         print(f"Queue: (G/G/{cfg['servidores']}/{cfg['capacidade']})")
@@ -180,6 +215,11 @@ def imprimir_resultados(t_global, tempos, perdas, config):
 
         print("------------- Lost Clients --------------")
         print(f"Lost Clients: {perdas[fid]}")
+        print("---------- Indices de Desempenho -----------")
+        print(f"Populacao: {indices[fid]['populacao']:.4f}")
+        print(f"Vazao: {indices[fid]['vazao']:.4f} clientes/unidade de tempo")
+        print(f"Utilizacao: {indices[fid]['utilizacao'] * 100:.2f}%")
+        print(f"Tempo de resposta: {indices[fid]['tempo_resposta']:.4f} unidades de tempo")
         print("-------- Simulation Time ----------")
         print(f"Total Time: {t_global:.2f}")
         print("=================================================================")
@@ -190,5 +230,5 @@ def imprimir_resultados(t_global, tempos, perdas, config):
 # MAIN
 # =====================================================================
 if __name__ == "__main__":
-    tempo_global, estado_tempos, quant_perdas = simular_rede(config_rede)
-    imprimir_resultados(tempo_global, estado_tempos, quant_perdas, config_rede)
+    tempo_global, estado_tempos, quant_perdas, quant_saidas = simular_rede(config_rede)
+    imprimir_resultados(tempo_global, estado_tempos, quant_perdas, quant_saidas, config_rede)
